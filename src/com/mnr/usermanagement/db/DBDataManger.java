@@ -6,8 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-import com.mnr.usermanagement.model.Model;
-import com.mnr.usermanagement.model.RegexValidate;
+import com.mnr.usermanagement.impls.User;
 
 public class DBDataManger {
 	
@@ -20,7 +19,7 @@ public class DBDataManger {
 	 * @param age - age of new user
 	 * @return true if user adeed succesfully to database
 	 */
-	public static boolean inserSqliteData(String fName,
+	/*public static boolean inserSqliteData(String fName,
 			String lName,String email,String company,String specInf,String photoPath,String birthDate){
 		
 		// if fields are bad
@@ -66,7 +65,7 @@ public class DBDataManger {
 		}
 			
 		return false;
-	}
+	}*/
 	
 	
 	public static boolean insertUserData(User user){

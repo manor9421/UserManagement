@@ -1,26 +1,25 @@
 package com.mnr.usermanagement.model;
 
+import com.mnr.usermanagement.impls.User;
+
 public class Model {
 
-	public static boolean validateUserData(String fName, String lName, String email,
+	public static User createUser(String fName, String lName, String email,
 			String company, String specInf, String photoPath, String birthDate){
 		
 		long birthTime = RegexValidate.dateToMillis(birthDate);
 		
-		if(checkString(fName) && checkString(lName)	&& RegexValidate.validEmail(email)
-				&& checkString(company) && checkString(specInf)
-				&& checkString(photoPath) && birthTime > 0
-		){
-			
-			return true;
-			
-		}
-		System.out.println("model err");
-		return false;
+		System.out.println("look: " + fName + lName + email + company + specInf+photoPath+birthDate+birthTime);
+		//User user = new User(fName, lName, email, company, specInf, photoPath, birthTime);
+		//return user;
+			return null;
+		
+		//System.out.println("model err");
+		//return null;
 		
 	}
 	
-	private static boolean checkString(String s){
+	private static synchronized boolean checkString(String s){
 		
 		if(s.isEmpty() || s.equals("")){
 			return false;

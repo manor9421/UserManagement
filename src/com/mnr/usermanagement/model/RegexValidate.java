@@ -19,6 +19,7 @@ public class RegexValidate {
 	
 	public static boolean validEmail(String email){
 		Matcher matcher = EMAIL_REGEX.matcher(email);
+		System.out.println("email status: " + matcher.find());
 		return matcher.find();
 	}
 	

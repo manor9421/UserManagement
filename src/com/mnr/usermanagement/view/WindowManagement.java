@@ -1,16 +1,13 @@
 package com.mnr.usermanagement.view;
 
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.util.Random;
+import java.util.ArrayList;
 
-import javax.imageio.ImageIO;
-
+import com.mnr.usermanagement.controller.ViewController;
 import com.mnr.usermanagement.db.DBDataManger;
-import com.mnr.usermanagement.db.PropertiesManager;
-import com.mnr.usermanagement.db.User;
-import com.mnr.usermanagement.model.ImageManipulator;
-import com.mnr.usermanagement.model.RegexValidate;
+import com.mnr.usermanagement.impls.User;
+import com.mnr.usermanagement.model.ImageUtils;
+import com.mnr.usermanagement.model.Model;
+import com.mnr.usermanagement.model.PropertiesManager;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -21,6 +18,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
@@ -31,13 +29,12 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class WindowManagement {
 	
 	Stage primaryStage;
-	BorderPane root;
+	static BorderPane root;
 	
 	/**
 	 * create window, and add menu bar
@@ -79,7 +76,6 @@ public class WindowManagement {
 		return menuBar;
 		
 	}
-	
 	private Menu makeUserMenu(){
 		/** user menu */
 		Menu userMenu = new Menu("User");
@@ -89,28 +85,13 @@ public class WindowManagement {
 		// add items to user menu
 		userMenu.getItems().addAll(addUser,showUser);
 		
-		EventHandler<ActionEvent> userMenuHandler = (ae)->{
-			String name = ( (MenuItem) ae.getTarget() ).getText();
-			switch(name){
-				case "Add":
-					root.setCenter(makeAddUserGrid());
-					break;
-				case "Show":
-					root.setCenter(makeUserCards());
-					break;
-				default:
-					break;
-			}// end of switch
-		};
-		
 		// add handlers
-		addUser.setOnAction(userMenuHandler);
-		showUser.setOnAction(userMenuHandler);
+		addUser.setOnAction(ViewController.itemListener(root));
+		showUser.setOnAction(ViewController.itemListener(root));
 		
 		return userMenu;
 		
 	}
-	
 	private Menu makeSettingsMenu(){
 		// settings menu
 		Menu settingsMenu = new Menu("Settings");
@@ -140,39 +121,17 @@ public class WindowManagement {
 		
 		settingsMenu.getItems().addAll(soundItem,new SeparatorMenuItem(),themeSettings);
 
-		EventHandler<ActionEvent> settingsMenuHandler = (ae)->{
-			String name = ( (RadioMenuItem) ae.getTarget() ).getText();
-			switch (name) {
-				case "Sound":
-					if(soundItem.isSelected()){
-						//soundItem.setSelected(false);
-						PropertiesManager.writeProperties("sound", "off");
-					}
-					break;
-				case "Day":
-					if(!dayTheme.isSelected())
-						PropertiesManager.writeProperties("theme", "day");
-					break;
-				case "Night":
-					if(!nightTheme.isSelected())
-						PropertiesManager.writeProperties("theme", "night");
-					break;
-				default:
-					break;
-			}
-			
-		};
-		
-		soundItem.setOnAction(settingsMenuHandler);
-		dayTheme.setOnAction(settingsMenuHandler);
-		nightTheme.setOnAction(settingsMenuHandler);
+		soundItem.setOnAction(ViewController.settingsListener());
+		dayTheme.setOnAction(ViewController.settingsListener());
+		nightTheme.setOnAction(ViewController.settingsListener());
 		
 		return settingsMenu;
 		
 	}
 	
 	
-	public GridPane makeAddUserGrid(){
+
+	public static void drawAddUserGrid(){
 		
 		GridPane userInfo = new GridPane();
 		
@@ -184,9 +143,11 @@ public class WindowManagement {
 		
 		Text email = new Text("email: ");
 		TextField emailTF = new TextField();
+		emailTF.setPromptText("name@site.com");
 		
 		Text birthDate = new Text("Date of Birth: ");
 		TextField birthDateTF = new TextField();
+		birthDateTF.setPromptText("01/01/1900");
 		
 		Text specialInfo = new Text("Special info: ");
 		TextField specialInfoTF = new TextField();
@@ -197,37 +158,37 @@ public class WindowManagement {
 		Text photo = new Text("Photo: ");
 		Button photoButton = new Button("Browse");
 		photoButton.setMaxWidth(200);
-		photoButton.setOnAction((e)->{
-			FileChooser chooser = new FileChooser();
-			chooser.setTitle("Br");
-			File file = chooser.showOpenDialog(new Stage());
-			photoButton.setText(savePicture(file.getPath()));
-			
-		});
+		photoButton.setOnAction(ViewController.imageButtonListener());
 		
 		Button confirm = new Button("Ok");
-		confirm.setOnAction((e)->{
-			
-			User user = new User(firstNameTF.getText(), lastNameTF.getText(),
-					emailTF.getText(), companyTF.getText(), specialInfoTF.getText(),
-					photoButton.getText(), RegexValidate.dateToMillis(birthDateTF.getText()));
-			
-			if( DBDataManger.insertUserData(user) ){
+		/*confirm.setOnAction(ViewController.confirmButtonListener(firstNameTF.getText(), lastNameTF.getText(),
+				emailTF.getText(), companyTF.getText(), specialInfoTF.getText(),
+				photoButton.getText(), birthDateTF.getText()));
+		*/
+		confirm.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent event) {
+				System.out.println("before: "+firstNameTF.getText()+ lastNameTF.getText()+
+						emailTF.getText()+ companyTF.getText()+ specialInfoTF.getText()+
+						photoButton.getText()+ birthDateTF.getText());
+				//validate
+				User user = Model.createUser(firstNameTF.getText(), lastNameTF.getText(),
+						emailTF.getText(), companyTF.getText(), specialInfoTF.getText(),
+						photoButton.getText(), birthDateTF.getText());
 				
-				System.out.println("Added to db");
-				
-				firstNameTF.setText("");
-				lastNameTF.setText("");
-				emailTF.setText("");
-				companyTF.setText("");
-				specialInfoTF.setText("");
-				photoButton.setText("");
-				birthDateTF.setText("");
-				
+				if(user != null){
+
+//					if( DBDataManger.insertUserData(user) ){
+//						System.out.println("Added to db");
+//						
+//						WindowManagement.drawAddUserGrid();
+//						
+//					}
+					
+				}
 			}
-			
 		});
-		
 		userInfo.add(firstName, 0, 0);
 		userInfo.add(firstNameTF, 1, 0);
 		userInfo.add(lastName, 0, 1);
@@ -244,15 +205,29 @@ public class WindowManagement {
 		userInfo.add(photoButton, 1, 6);
 		userInfo.add(confirm, 1, 7);
 		
-		return userInfo;
+		root.setCenter(userInfo);
 		
 	}
 
 	
+	public static ScrollPane showUserCards(ArrayList<User> users){
+		
+		ScrollPane content = new ScrollPane();
+		content.setPrefSize(280, 100);
+		
+		VBox userCardsBox = new VBox();
+		
+		for (User user: users) {
+			userCardsBox.getChildren().add(makeUserInfoCard(user));
+		}
+		
+		content.setContent(userCardsBox);
+		
+		return content;
+		
+	}
 	
-	
-	
-	public VBox makeUserInfoCard(User user){
+	private static VBox makeUserInfoCard(User user){
 		
 		VBox infoCard = new VBox();
 		
@@ -265,11 +240,9 @@ public class WindowManagement {
 				new Text("email: " + user.getEmail())
 				);
 		
-		//String pathname = "userImages/s1.jpg";
-		
 		String pathname = "userImages" + "/" + user.getPhotoPath();
 		
-		Image userImg = ImageManipulator.cropImage(pathname);
+		Image userImg = ImageUtils.cropImage(pathname);
 		
 		ImageView userIV = null;
 		if( userImg != null ){
@@ -286,78 +259,9 @@ public class WindowManagement {
 		return infoCard;
 		
 	}
-	
-	
-	public VBox makeUserCards(){
-		
-		VBox content = new VBox();
-		
-		for (User user: DBDataManger.selectAllusers()) {
-			
-			content.getChildren().add(makeUserInfoCard(user));
-			
-		}
-		
-		return content;
-		
-	}
-	
 
-	public String savePicture(String path){
-
-		try{
-			File imgFolder = new File( getClass().getClassLoader().getResource("userImages").getFile() );
-			if(imgFolder.isDirectory()){
-				System.out.println("dir:" + imgFolder);
-				
-				File sourceImg = new File(path);
-				String extension = "";
-				int i = sourceImg.toString().lastIndexOf('.');
-				if (i > 0) {
-				    extension = sourceImg.toString().substring(i+1);
-				}
-				//BufferedImage bi = new BufferedImage(772,492,BufferedImage.TYPE_INT_ARGB);
-				BufferedImage bi = ImageIO.read(sourceImg);
-				
-				String newName = createNewName() + "." + extension;
-				File newImageFile = new File( imgFolder + "/" + newName );
-				newImageFile.createNewFile();
-				
-				ImageIO.write(bi, extension, newImageFile);
-				
-				System.out.println("file copied");
-				
-				return newName;
-				
-			}else{
-				System.out.println("not dir: "+imgFolder);
-			}
-		}catch (Exception e) {
-			System.out.println("exc");
-		}
-		
-		return null;
-		
-	}
 	
-	/**
-	 * create random name for image(without extension)
-	 * @return
-	 */
-	public String createNewName(){
-		Random rand = new Random();
-		
-		String alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		StringBuilder sb = new StringBuilder();
-		
-		for(int i=0;i<6;i++){
-			sb.append(alphabet.charAt(rand.nextInt(alphabet.length())));
-		}
-		
-		sb.append(System.currentTimeMillis());
-		
-		return sb.toString();
-		
-	}
+	
+	
 
 }
