@@ -7,16 +7,30 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Properties;
 
-import com.mnr.usermanagement.main.Main;
 
-public class PropertiesManager {// TODO make singleton
+public class PropertiesManager {
+	
+	private static PropertiesManager instance;
 	
 	private static String propFile = "config.properties";
+	
+	private PropertiesManager(){}
+	
+	// singleton
+	public static synchronized PropertiesManager getInstance() {
+		
+		if(instance == null){
+			instance = new PropertiesManager();
+		}
+		
+		return instance;
+		
+	}
 
-	public void writeProperties(String properyName, String propertyValue){
+	public static void writeProperties(String properyName, String propertyValue){
 		
 		Properties properties = new Properties();
-		String propFilePath = getClass().getClassLoader()
+		String propFilePath = PropertiesManager.class.getClassLoader()
 				.getResource(propFile).getFile();
 		
 		try(
@@ -34,12 +48,12 @@ public class PropertiesManager {// TODO make singleton
 		
 	}
 	
-	public String readProperties(String propertyName){
+	public static String readProperties(String propertyName){
 		
 		Properties prop = new Properties();
 		
-		String propFilePath = getClass().getClassLoader()
-				.getResource(propFile).getFile();
+		String propFilePath = PropertiesManager.class.getClassLoader()
+				.getResource(propFile).getFile();//getClass().
 		try(
 			InputStream is = new FileInputStream(propFilePath)
 			//InputStream is = PropertiesManager.class.getClassLoader().getResourceAsStream(propFilePath);
@@ -50,11 +64,11 @@ public class PropertiesManager {// TODO make singleton
 			
 			if(prop.contains(propertyName)){
 				String propValue = prop.getProperty(propertyName);
-				System.out.println("yeeee");
+				System.out.println("property " + propertyName + " exists");
 				return propValue;
 				
 			}
-			System.out.println("noooo");
+			System.out.println("no property:" + propertyName);
 			
 		}catch(IOException e){
 			e.printStackTrace();

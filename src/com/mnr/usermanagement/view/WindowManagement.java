@@ -1,20 +1,16 @@
 package com.mnr.usermanagement.view;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.Random;
 
 import javax.imageio.ImageIO;
 
 import com.mnr.usermanagement.db.DBDataManger;
 import com.mnr.usermanagement.db.PropertiesManager;
-import com.mnr.usermanagement.db.ValidateParams;
+import com.mnr.usermanagement.db.User;
+import com.mnr.usermanagement.model.ImageManipulator;
+import com.mnr.usermanagement.model.RegexValidate;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -30,7 +26,6 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -43,7 +38,6 @@ public class WindowManagement {
 	
 	Stage primaryStage;
 	BorderPane root;
-	PropertiesManager pm;
 	
 	/**
 	 * create window, and add menu bar
@@ -51,15 +45,16 @@ public class WindowManagement {
 	 */
 	public WindowManagement(Stage primaryStage) {
 		this.primaryStage = primaryStage;
-		pm = new PropertiesManager();
 		
 		primaryStage.setTitle("Add User");
 		root = new BorderPane();
 		root.setTop(makeManuBar());//add menu bar
+		// make scene
 		primaryStage.setScene(new Scene(root,400,300));
-		
+		// show scene
 		primaryStage.show();
 		
+		// close actions
 		primaryStage.setOnCloseRequest((e)->{
 			System.out.println("program is closing...");
 			Platform.exit();
@@ -68,19 +63,59 @@ public class WindowManagement {
 		
 	}
 	
+	/**
+	 * 
+	 * @return menu bar with all views and actions
+	 */
 	public MenuBar makeManuBar(){
 		
 		MenuBar menuBar = new MenuBar();
 		
+		Menu userMenu = makeUserMenu();
+		Menu settingsMenu = makeSettingsMenu();
+		
+		menuBar.getMenus().addAll(userMenu, settingsMenu);
+		
+		return menuBar;
+		
+	}
+	
+	private Menu makeUserMenu(){
+		/** user menu */
 		Menu userMenu = new Menu("User");
 		MenuItem addUser = new MenuItem("Add");
 		MenuItem showUser = new MenuItem("Show");//
 		
+		// add items to user menu
 		userMenu.getItems().addAll(addUser,showUser);
 		
+		EventHandler<ActionEvent> userMenuHandler = (ae)->{
+			String name = ( (MenuItem) ae.getTarget() ).getText();
+			switch(name){
+				case "Add":
+					root.setCenter(makeAddUserGrid());
+					break;
+				case "Show":
+					root.setCenter(makeUserCards());
+					break;
+				default:
+					break;
+			}// end of switch
+		};
+		
+		// add handlers
+		addUser.setOnAction(userMenuHandler);
+		showUser.setOnAction(userMenuHandler);
+		
+		return userMenu;
+		
+	}
+	
+	private Menu makeSettingsMenu(){
+		// settings menu
 		Menu settingsMenu = new Menu("Settings");
 		
-		MenuItem soundSetings = new MenuItem("Sounds");// TODO add icon + -
+		RadioMenuItem soundItem = new RadioMenuItem("Sounds");
 		Menu themeSettings = new Menu("Theme");
 		RadioMenuItem dayTheme = new RadioMenuItem("Day");
 		RadioMenuItem nightTheme = new RadioMenuItem("Night");
@@ -88,7 +123,12 @@ public class WindowManagement {
 		dayTheme.setToggleGroup(themeGroup);
 		nightTheme.setToggleGroup(themeGroup);
 		
-		String theme = pm.readProperties("theme");
+		String sound = PropertiesManager.readProperties("sound");
+		if(sound == null || sound.equals("on")){
+			soundItem.setSelected(true);
+		}
+		
+		String theme = PropertiesManager.readProperties("theme");
 		
 		if( theme == null || theme.equals("day")){
 			dayTheme.setSelected(true);
@@ -98,33 +138,39 @@ public class WindowManagement {
 		
 		themeSettings.getItems().addAll(dayTheme,nightTheme);
 		
-		settingsMenu.getItems().addAll(soundSetings,new SeparatorMenuItem(),themeSettings);
-		menuBar.getMenus().addAll(userMenu, settingsMenu);
-		
-		EventHandler<ActionEvent> menuHandler = new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent ae) {
-				String name = ( (MenuItem) ae.getTarget() ).getText();
-				switch(name){
-					case "Add":
-						root.setCenter(makeAddUserGrid());
-						break;
-					case "Show":
-						root.setCenter(makeUserCards());
-						break;
-					default:
-						break;
-				}// end of switch
+		settingsMenu.getItems().addAll(soundItem,new SeparatorMenuItem(),themeSettings);
+
+		EventHandler<ActionEvent> settingsMenuHandler = (ae)->{
+			String name = ( (RadioMenuItem) ae.getTarget() ).getText();
+			switch (name) {
+				case "Sound":
+					if(soundItem.isSelected()){
+						//soundItem.setSelected(false);
+						PropertiesManager.writeProperties("sound", "off");
+					}
+					break;
+				case "Day":
+					if(!dayTheme.isSelected())
+						PropertiesManager.writeProperties("theme", "day");
+					break;
+				case "Night":
+					if(!nightTheme.isSelected())
+						PropertiesManager.writeProperties("theme", "night");
+					break;
+				default:
+					break;
 			}
+			
 		};
 		
-		// add handlers
-		addUser.setOnAction(menuHandler);
-		showUser.setOnAction(menuHandler);
+		soundItem.setOnAction(settingsMenuHandler);
+		dayTheme.setOnAction(settingsMenuHandler);
+		nightTheme.setOnAction(settingsMenuHandler);
 		
-		return menuBar;
+		return settingsMenu;
 		
 	}
+	
 	
 	public GridPane makeAddUserGrid(){
 		
@@ -151,31 +197,36 @@ public class WindowManagement {
 		Text photo = new Text("Photo: ");
 		Button photoButton = new Button("Browse");
 		photoButton.setMaxWidth(200);
-		
-		photoButton.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event){
-				FileChooser chooser = new FileChooser();
-				chooser.setTitle("Br");
-				File file = chooser.showOpenDialog(new Stage());
-				photoButton.setText("aa");
-				photoButton.setText(file.getPath());
-				//System.out.println(photoPath);
-			}
+		photoButton.setOnAction((e)->{
+			FileChooser chooser = new FileChooser();
+			chooser.setTitle("Br");
+			File file = chooser.showOpenDialog(new Stage());
+			photoButton.setText(savePicture(file.getPath()));
+			
 		});
+		
 		Button confirm = new Button("Ok");
-		/*confirm.setOnAction((e)->{
-			try {
-				DBDataManger.inserSqliteData(firstNameTF.getText(), lastNameTF.getText(), emailTF.getText(),
-						companyTF.getText(), specialInfoTF.getText(), photoButton.getText(),
-						ValidateParams.makeLong(birthDateTF.getText()));
-			} catch (ClassNotFoundException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+		confirm.setOnAction((e)->{
+			
+			User user = new User(firstNameTF.getText(), lastNameTF.getText(),
+					emailTF.getText(), companyTF.getText(), specialInfoTF.getText(),
+					photoButton.getText(), RegexValidate.dateToMillis(birthDateTF.getText()));
+			
+			if( DBDataManger.insertUserData(user) ){
+				
+				System.out.println("Added to db");
+				
+				firstNameTF.setText("");
+				lastNameTF.setText("");
+				emailTF.setText("");
+				companyTF.setText("");
+				specialInfoTF.setText("");
+				photoButton.setText("");
+				birthDateTF.setText("");
+				
 			}
-			//,,,,,
-			//
-		});*/
+			
+		});
 		
 		userInfo.add(firstName, 0, 0);
 		userInfo.add(firstNameTF, 1, 0);
@@ -198,53 +249,29 @@ public class WindowManagement {
 	}
 
 	
-	public Image cropImage(String path){
-		
-		File imgFile = new File( getClass().getClassLoader().getResource(path).getFile() );
-		
-		if( imgFile.exists() && !imgFile.isDirectory() ){
-			Image img = new Image(path);
-
-			int newWidth = 100;
-			int newHeight = 80;
-			
-			if(img.getWidth()>=newWidth && img.getHeight()>=newHeight){
-				
-				int x = (int) ( img.getWidth() - newWidth )/2;
-				int y = (int) ( img.getHeight() - newHeight )/2;
-				
-				WritableImage wi = new WritableImage(img.getPixelReader(), x, y, newWidth, newHeight);
-				
-				return wi;
-				
-			}
-			
-		}
-		
-		return null;
-		
-	}
 	
 	
-	public VBox makeUserInfoCard(String fName, String lName,
-			String companyName, int age, String email, String specInf, String photoPath){
+	
+	public VBox makeUserInfoCard(User user){
 		
 		VBox infoCard = new VBox();
 		
 		HBox userInfo = new HBox();
 		VBox mainInfo = new VBox();
 		mainInfo.getChildren().addAll(
-				new Text(fName + " " + lName),
-				new Text("Company: " + companyName),
-				new Text("Age: " + age),
-				new Text("email: " + email)
+				new Text(user.getfName() + " " + user.getlName()),
+				new Text("Company: " + user.getCompany()),
+				new Text("Age: " + user.getBirthDate()),
+				new Text("email: " + user.getEmail())
 				);
 		
+		//String pathname = "userImages/s1.jpg";
+		
+		String pathname = "userImages" + "/" + user.getPhotoPath();
+		
+		Image userImg = ImageManipulator.cropImage(pathname);
+		
 		ImageView userIV = null;
-		
-		String pathname = "userImages/s1.jpg";
-		
-		Image userImg = cropImage(pathname);
 		if( userImg != null ){
 			userIV = new ImageView(userImg);
 		}else{
@@ -254,7 +281,7 @@ public class WindowManagement {
 		
 		userInfo.getChildren().addAll(mainInfo,userIV);
 		
-		infoCard.getChildren().addAll(userInfo,new Text(specInf));
+		infoCard.getChildren().addAll(userInfo,new Text(user.getSpecInf()));
 		
 		return infoCard;
 		
@@ -265,7 +292,11 @@ public class WindowManagement {
 		
 		VBox content = new VBox();
 		
-		content.getChildren().add(makeUserInfoCard("B", "m", "c", 11, "q", "d", "s"));
+		for (User user: DBDataManger.selectAllusers()) {
+			
+			content.getChildren().add(makeUserInfoCard(user));
+			
+		}
 		
 		return content;
 		
@@ -309,6 +340,10 @@ public class WindowManagement {
 		
 	}
 	
+	/**
+	 * create random name for image(without extension)
+	 * @return
+	 */
 	public String createNewName(){
 		Random rand = new Random();
 		
