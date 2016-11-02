@@ -1,6 +1,13 @@
 package com.mnr.usermanagement.main;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Properties;
+
 import com.mnr.usermanagement.db.DBDataManger;
+import com.mnr.usermanagement.db.PropertiesManager;
 import com.mnr.usermanagement.db.User;
 import com.mnr.usermanagement.view.WindowManagement;
 
@@ -13,8 +20,11 @@ public class Main extends Application{
 	public void start(Stage primaryStage) throws Exception {
 		
 		WindowManagement wm = new WindowManagement(primaryStage);
+		String aString = wm.savePicture("/home/gdx/Desktop/voprosi.png");
 		
-		wm.drawAllUserFields();
+		System.out.println(aString);
+		
+		//wm.drawAllUserFields();
 		
 		
 		
@@ -30,6 +40,11 @@ public class Main extends Application{
 		
 		*/
 		
+		/*PropertiesManager pm = new PropertiesManager();
+		//pm.writeProperties("database", "users");
+		
+		System.out.println(pm.readProperties("database"));
+		*/
 		
 	}
 	

@@ -1,8 +1,24 @@
 package com.mnr.usermanagement.view;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.util.Random;
+
+import javax.imageio.ImageIO;
+
+import com.mnr.usermanagement.db.DBDataManger;
+import com.mnr.usermanagement.db.PropertiesManager;
+import com.mnr.usermanagement.db.ValidateParams;
 
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Menu;
@@ -15,18 +31,41 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 public class WindowManagement {
 	
 	Stage primaryStage;
+	BorderPane root;
+	PropertiesManager pm;
 	
-	public WindowManagement(Stage primariStage) {
-		this.primaryStage = primariStage;
+	/**
+	 * create window, and add menu bar
+	 * @param primariStage
+	 */
+	public WindowManagement(Stage primaryStage) {
+		this.primaryStage = primaryStage;
+		pm = new PropertiesManager();
+		
+		primaryStage.setTitle("Add User");
+		root = new BorderPane();
+		root.setTop(makeManuBar());//add menu bar
+		primaryStage.setScene(new Scene(root,400,300));
+		
+		primaryStage.show();
+		
+		primaryStage.setOnCloseRequest((e)->{
+			System.out.println("program is closing...");
+			Platform.exit();
+			System.exit(0);
+		});
+		
 	}
 	
 	public MenuBar makeManuBar(){
@@ -35,22 +74,53 @@ public class WindowManagement {
 		
 		Menu userMenu = new Menu("User");
 		MenuItem addUser = new MenuItem("Add");
-		MenuItem showUser = new MenuItem("Show");
+		MenuItem showUser = new MenuItem("Show");//
+		
 		userMenu.getItems().addAll(addUser,showUser);
 		
 		Menu settingsMenu = new Menu("Settings");
-		MenuItem soundSetings = new MenuItem("Sounds");
+		
+		MenuItem soundSetings = new MenuItem("Sounds");// TODO add icon + -
 		Menu themeSettings = new Menu("Theme");
 		RadioMenuItem dayTheme = new RadioMenuItem("Day");
 		RadioMenuItem nightTheme = new RadioMenuItem("Night");
 		ToggleGroup themeGroup = new ToggleGroup();
 		dayTheme.setToggleGroup(themeGroup);
 		nightTheme.setToggleGroup(themeGroup);
-		dayTheme.setSelected(true);
+		
+		String theme = pm.readProperties("theme");
+		
+		if( theme == null || theme.equals("day")){
+			dayTheme.setSelected(true);
+		}else{
+			nightTheme.setSelected(true);
+		}
+		
 		themeSettings.getItems().addAll(dayTheme,nightTheme);
 		
 		settingsMenu.getItems().addAll(soundSetings,new SeparatorMenuItem(),themeSettings);
 		menuBar.getMenus().addAll(userMenu, settingsMenu);
+		
+		EventHandler<ActionEvent> menuHandler = new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent ae) {
+				String name = ( (MenuItem) ae.getTarget() ).getText();
+				switch(name){
+					case "Add":
+						root.setCenter(makeAddUserGrid());
+						break;
+					case "Show":
+						root.setCenter(makeUserCards());
+						break;
+					default:
+						break;
+				}// end of switch
+			}
+		};
+		
+		// add handlers
+		addUser.setOnAction(menuHandler);
+		showUser.setOnAction(menuHandler);
 		
 		return menuBar;
 		
@@ -80,6 +150,32 @@ public class WindowManagement {
 		
 		Text photo = new Text("Photo: ");
 		Button photoButton = new Button("Browse");
+		photoButton.setMaxWidth(200);
+		
+		photoButton.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event){
+				FileChooser chooser = new FileChooser();
+				chooser.setTitle("Br");
+				File file = chooser.showOpenDialog(new Stage());
+				photoButton.setText("aa");
+				photoButton.setText(file.getPath());
+				//System.out.println(photoPath);
+			}
+		});
+		Button confirm = new Button("Ok");
+		/*confirm.setOnAction((e)->{
+			try {
+				DBDataManger.inserSqliteData(firstNameTF.getText(), lastNameTF.getText(), emailTF.getText(),
+						companyTF.getText(), specialInfoTF.getText(), photoButton.getText(),
+						ValidateParams.makeLong(birthDateTF.getText()));
+			} catch (ClassNotFoundException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			//,,,,,
+			//
+		});*/
 		
 		userInfo.add(firstName, 0, 0);
 		userInfo.add(firstNameTF, 1, 0);
@@ -95,10 +191,40 @@ public class WindowManagement {
 		userInfo.add(companyTF, 1, 5);
 		userInfo.add(photo, 0, 6);
 		userInfo.add(photoButton, 1, 6);
+		userInfo.add(confirm, 1, 7);
 		
 		return userInfo;
 		
 	}
+
+	
+	public Image cropImage(String path){
+		
+		File imgFile = new File( getClass().getClassLoader().getResource(path).getFile() );
+		
+		if( imgFile.exists() && !imgFile.isDirectory() ){
+			Image img = new Image(path);
+
+			int newWidth = 100;
+			int newHeight = 80;
+			
+			if(img.getWidth()>=newWidth && img.getHeight()>=newHeight){
+				
+				int x = (int) ( img.getWidth() - newWidth )/2;
+				int y = (int) ( img.getHeight() - newHeight )/2;
+				
+				WritableImage wi = new WritableImage(img.getPixelReader(), x, y, newWidth, newHeight);
+				
+				return wi;
+				
+			}
+			
+		}
+		
+		return null;
+		
+	}
+	
 	
 	public VBox makeUserInfoCard(String fName, String lName,
 			String companyName, int age, String email, String specInf, String photoPath){
@@ -134,54 +260,69 @@ public class WindowManagement {
 		
 	}
 	
-	public Image cropImage(String path){
+	
+	public VBox makeUserCards(){
 		
-		File imgFile = new File( getClass().getClassLoader().getResource(path).getFile() );
+		VBox content = new VBox();
 		
-		if( imgFile.exists() && !imgFile.isDirectory() ){
-			Image img = new Image(path);
+		content.getChildren().add(makeUserInfoCard("B", "m", "c", 11, "q", "d", "s"));
+		
+		return content;
+		
+	}
+	
 
-			int newWidth = 100;
-			int newHeight = 80;
-			
-			if(img.getWidth()>=newWidth && img.getHeight()>=newHeight){
+	public String savePicture(String path){
+
+		try{
+			File imgFolder = new File( getClass().getClassLoader().getResource("userImages").getFile() );
+			if(imgFolder.isDirectory()){
+				System.out.println("dir:" + imgFolder);
 				
-				int x = (int) ( img.getWidth() - newWidth )/2;
-				int y = (int) ( img.getHeight() - newHeight )/2;
+				File sourceImg = new File(path);
+				String extension = "";
+				int i = sourceImg.toString().lastIndexOf('.');
+				if (i > 0) {
+				    extension = sourceImg.toString().substring(i+1);
+				}
+				//BufferedImage bi = new BufferedImage(772,492,BufferedImage.TYPE_INT_ARGB);
+				BufferedImage bi = ImageIO.read(sourceImg);
 				
-				WritableImage wi = new WritableImage(img.getPixelReader(), x, y, newWidth, newHeight);
+				String newName = createNewName() + "." + extension;
+				File newImageFile = new File( imgFolder + "/" + newName );
+				newImageFile.createNewFile();
 				
-				return wi;
+				ImageIO.write(bi, extension, newImageFile);
 				
+				System.out.println("file copied");
+				
+				return newName;
+				
+			}else{
+				System.out.println("not dir: "+imgFolder);
 			}
-			
+		}catch (Exception e) {
+			System.out.println("exc");
 		}
 		
 		return null;
 		
 	}
 	
-	public void drawAllUserFields(){
+	public String createNewName(){
+		Random rand = new Random();
 		
-		primaryStage.setTitle("Add User");
+		String alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		StringBuilder sb = new StringBuilder();
 		
-		VBox root = new VBox();
-		primaryStage.setScene(new Scene(root,400,300));
+		for(int i=0;i<6;i++){
+			sb.append(alphabet.charAt(rand.nextInt(alphabet.length())));
+		}
 		
-		root.getChildren().add(makeManuBar());
+		sb.append(System.currentTimeMillis());
 		
-		//root.getChildren().add(makeAddUserGrid());
-		root.getChildren().add(makeUserInfoCard("B", "m", "c", 11, "q", "d", "s"));
-		
-		primaryStage.show();
-		
-		primaryStage.setOnCloseRequest((e)->{
-			System.out.println("program is closing");
-			Platform.exit();
-			System.exit(0);
-		});
+		return sb.toString();
 		
 	}
-	
 
 }

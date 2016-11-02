@@ -60,6 +60,7 @@ public class DBDataManger {
 		return false;
 	}
 	
+	
 	public static boolean insertUserData(User user) throws ClassNotFoundException{
 		
 		String sql = "INSERT INTO `users`(`f_name`,`l_name`,`email`,`company`,`spec_inf`,`photo_path`,`birth_date`) VALUES(?,?,?,?,?,?,?)";
