@@ -1,5 +1,7 @@
 package com.mnr.usermanagement.view;
 
+import java.io.File;
+
 import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -10,7 +12,9 @@ import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.WritableImage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -109,8 +113,20 @@ public class WindowManagement {
 				new Text("Age: " + age),
 				new Text("email: " + email)
 				);
-		ImageView userImage = new ImageView();
-		userInfo.getChildren().addAll(mainInfo,userImage);
+		
+		ImageView userIV = null;
+		
+		String pathname = "userImages/s1.jpg";
+		
+		Image userImg = cropImage(pathname);
+		if( userImg != null ){
+			userIV = new ImageView(userImg);
+		}else{
+			userIV = new ImageView();
+			System.out.println("image is null");
+		}
+		
+		userInfo.getChildren().addAll(mainInfo,userIV);
 		
 		infoCard.getChildren().addAll(userInfo,new Text(specInf));
 		
@@ -118,8 +134,34 @@ public class WindowManagement {
 		
 	}
 	
+	public Image cropImage(String path){
+		
+		File imgFile = new File( getClass().getClassLoader().getResource(path).getFile() );
+		
+		if( imgFile.exists() && !imgFile.isDirectory() ){
+			Image img = new Image(path);
+
+			int newWidth = 100;
+			int newHeight = 80;
+			
+			if(img.getWidth()>=newWidth && img.getHeight()>=newHeight){
+				
+				int x = (int) ( img.getWidth() - newWidth )/2;
+				int y = (int) ( img.getHeight() - newHeight )/2;
+				
+				WritableImage wi = new WritableImage(img.getPixelReader(), x, y, newWidth, newHeight);
+				
+				return wi;
+				
+			}
+			
+		}
+		
+		return null;
+		
+	}
 	
-	public void drawAddUserFields(){
+	public void drawAllUserFields(){
 		
 		primaryStage.setTitle("Add User");
 		
@@ -140,5 +182,6 @@ public class WindowManagement {
 		});
 		
 	}
+	
 
 }
